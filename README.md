@@ -1,6 +1,7 @@
-# Minimal SoC for the Ibex Core
+# Minimal SoC for the CV32E40X Core
 
-This repository includes the [Ibex repository](https://github.com/lowRISC/ibex)
+This repository includes the
+[CV32E40X repository](https://github.com/openhwgroup/cv32e40x.git)
 as a submodule. After cloning you need to initialize the submodule:
 
     git submodule update --init --recursive
