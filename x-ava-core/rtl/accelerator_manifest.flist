@@ -1,0 +1,17 @@
+// Manifest for the AVA RTL model - Intended to be used by verilator
+// TODO: Relative paths based on environment variable
+${AVA_RTL_DIR}/accelerator_pkg.sv
+${AVA_RTL_DIR}/accelerator_top.sv
+${AVA_RTL_DIR}/arith_stage.sv
+${AVA_RTL_DIR}/bit_ext.sv
+${AVA_RTL_DIR}/pe_32b.sv
+${AVA_RTL_DIR}/processing_element.sv
+${AVA_RTL_DIR}/relu_bound.sv
+${AVA_RTL_DIR}/sat_unit.sv
+${AVA_RTL_DIR}/scalar_replicate.sv
+${AVA_RTL_DIR}/vector_csrs.sv
+${AVA_RTL_DIR}/vector_decoder.sv
+${AVA_RTL_DIR}/vector_registers.sv
+${AVA_RTL_DIR}/vw_sign_ext.sv
+${AVA_RTL_DIR}/vector_lsu.sv
+${AVA_RTL_DIR}/temporary_reg.sv
