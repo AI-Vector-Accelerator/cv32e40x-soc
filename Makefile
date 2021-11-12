@@ -29,13 +29,18 @@ MEM_W		?= 32
 MEM_SZ      ?= 262144
 MEM_LATENCY ?= 1
 
-vivado:
+# programs for testing
+PROGS ?= test.S
+
+.PHONY: vivado verilator clean
+
+vivado: progs.csv
 	cd $(PROJ_DIR) && vivado -mode batch -source $(VIVADO_TCL)                \
 	    -tclargs $(SIM_DIR) $(CORE_DIR)                                       \
 	    "MEM_W=$(MEM_W) MEM_SZ=$(MEM_SZ) MEM_LATENCY=$(MEM_LATENCY)"          \
 	    $(SIM_DIR)/vivado.csv $(abspath $(PROG_PATHS_LIST)) 'clk'
 
-verilator:
+verilator: progs.csv
 	cp $(SIM_DIR)/verilator_main.cpp $(PROJ_DIR)/
 	cd $(PROJ_DIR);                                                           \
 	trace="";                                                                 \
@@ -59,3 +64,26 @@ verilator:
 	make -C $(PROJ_DIR)/obj_dir -f Vcv32e40x_wrapper.mk Vcv32e40x_wrapper;    \
 	$(PROJ_DIR)/obj_dir/Vcv32e40x_wrapper $(abspath $(PROG_PATHS_LIST))       \
 	    $(MEM_W) $(MEM_SZ) $(MEM_LATENCY) 100 $(abspath $(TRACE_VCD))
+
+progs.csv: $(PROGS)
+	for prog in $(PROGS:.S=.vmem); do                                         \
+	    make -f $(SIM_DIR)/sw/Makefile $$prog;                                \
+	done
+	@rm -f progs.csv;                                                         \
+	for prog in $(abspath $(PROGS:.S=.vmem)); do                              \
+	    elf="$${prog%.*}.elf";                                                \
+	    vref_start=`readelf -s $$elf | grep vref_start |                      \
+	                sed 's/^.*\([A-Fa-f0-9]\{8\}\).*$$/\1/'`;                 \
+	    vref_end=`readelf -s $$elf | grep vref_end |                          \
+	              sed 's/^.*\([A-Fa-f0-9]\{8\}\).*$$/\1/'`;                   \
+	    vdata_start=`readelf -s $$elf | grep vdata_start |                    \
+	                 sed 's/^.*\([A-Fa-f0-9]\{8\}\).*$$/\1/'`;                \
+	    vdata_end=`readelf -s $$elf | grep vdata_end |                        \
+	               sed 's/^.*\([A-Fa-f0-9]\{8\}\).*$$/\1/'`;                  \
+	    memref="$${prog%.*}.ref.vmem $$vref_start $$vref_end";                \
+	    memo="$${prog%.*}.dump.vmem $$vdata_start $$vdata_end";               \
+	    echo "$$prog $$memref $$memo " >> progs.csv;                          \
+	done
+
+clean:
+	rm -rf *.vmem *.elf *.o progs.csv
