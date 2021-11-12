@@ -184,3 +184,83 @@ module dummy_extension (
     assign xif_result.result               = '0;
 
 endmodule
+
+////////////////////////////////////////////////////////////////////
+//AVA CORE
+module xava(
+    input logic              clk_i,
+    input logic              rst_ni,
+    if_xif.coproc_compressed xif_compressed, //unused
+    if_xif.coproc_issue      xif_issue, //issue_valid, issue_ready, req and resp pkt 
+    if_xif.coproc_commit     xif_commit, //commit_valid, commit pkt
+    if_xif.coproc_mem        xif_mem, //mem_valid, mem_ready, req and resp pkt
+    if_xif.coproc_mem_result xif_mem_result, //output mem_result_valid, output mem_result, mem result sent to 
+    if_xif.coproc_result     xif_result //result_valid, result_ready, result pkt
+    );
+    
+    //Instantiate accelerator top and adaptor
+    wire  [31:0] apu_result;
+    wire  [4:0]  apu_flags_o;
+    wire          apu_gnt;
+    wire         apu_rvalid;
+    wire         clk;
+    wire         n_reset;
+    wire         apu_req;
+    wire  [2:0][31:0] apu_operands_i;
+    wire  [5:0]  apu_op;
+    wire  [14:0] apu_flags_i;
+    wire         data_req_o;
+    wire         data_gnt_i;
+    wire         data_rvalid_i;
+    wire         data_we_o;
+    wire  [3:0]  data_be_o;
+    wire  [31:0] data_addr_o;
+    wire  [31:0] data_wdata_o;
+    wire  [31:0] data_rdata_i;
+    wire         core_halt_o;
+
+
+    accelerator_top acctop0(
+	    .apu_result		(xif_result.result),
+	    .apu_flags_o	('0), //nothing returned to interface/cpu, maybe use for something else?
+	    .apu_gnt		(), //WAIT state in decoder, when gnt = 1 apu_operands_o, apu_op_o, apu_flags_o may change next cycle
+	    .apu_rvalid		(xif_result.result_valid),
+	    .clk		(clk_i),
+	    .n_reset		(rst_ni),
+	    .apu_req		(xif_issue.issue_valid), // && xif_issue.issue_ready), //ready for new instructions (revisit)
+	    .apu_operands_i	(xif_issue.issue_req), //this contains the funct3, major_opcode, funct6, source1, source2, destination fields 
+	    //...of type wire [2:0][31:0];
+	    .apu_op		(), //this tells the core what apu op is required but not used within ava... (as they are all vector instrs?)
+	    .apu_flags_i	(), //again this is meant to pass in flags, just stored and not used
+
+	    //VLSU signals
+	    .data_req_o		(), //vlsu signal for in LOAD_CYCLE and STORE_CYCLE in vlsu (request)
+	    .data_gnt_i		(), //vlsu signal, not used anywhere... (generate)
+	    .data_rvalid_i	(), //vlsu signal for in LOAD_WAIT and STORE_WAIT (result valid)
+	    .data_we_o		(), //vlsu signal for in STORE_CYCLE (write enable?)
+	    .data_be_o		(), //vlsu signal, (byte enable?)
+	    //= vlsu_store_i ? store_cycle_be : 4'b1111; in vlsu
+	    .data_addr_o	(), //vlsu signal, data address output 
+	    //= vlsu_store_i ? ({cycle_addr[31:2], 2'd0} + (store_cycles_cnt << 2)) : {cycle_addr[31:2], 2'd0};
+	    .data_wdata_o	(), //vlsu signal, (write data out), set to 0...
+	    .data_rdata_i	(), //vlsu signal, (read data in), written to temporary reg and split into words 32bits -> 4x8bits 
+	    
+	    //Core halt signal
+	    .core_halt_o	()  //core halt to stop main core?
+	);
+
+    //Pack the x interface
+    //assign input output
+    assign apu_req = xif_issue.issue_valid;
+    assign apu_operands_i [0][14:12] = xif_issue.issue_req; //funct3
+    assign apu_operands_i [0][6:0] = xif_issue.issue_req; //major opcode
+    assign apu_operands_i [0][31:26] = xif_issue.issue_req; //funct6
+    assign apu_operands_i [0][19:15] = xif_issue.issue_req.rs[0]; //rs 1
+    assign apu_operands_i [0][24:20] = xif_issue.issue_req.rs[1]; //rs 2
+    assign apu_operands_i [0][11:7] = xif_issue.issue_req; //destination
+
+    assign apu_operands_i [1] = xif_issue.issue_req;
+    assign apu_operands_i [2] = xif_issue.issue_req;
+    assign xif_result.result
+
+endmodule
