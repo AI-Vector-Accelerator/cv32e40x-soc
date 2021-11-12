@@ -90,7 +90,7 @@ module cv32e40x_wrapper #(
         .core_sleep_o        (              )
     );
 
-    dummy_extension ext (
+    xava ext (
         .clk_i          ( clk_i  ),
         .rst_ni         ( rst_ni ),
         .xif_compressed ( ext_if ),
@@ -221,7 +221,7 @@ module xava(
 
     accelerator_top acctop0(
 	    .apu_result		(apu_result),
-	    .apu_flags_o	('0), //nothing returned to interface/cpu, maybe use for something else?
+	    .apu_flags_o	(apu_flag_o), //nothing returned to interface/cpu, maybe use for something else?
 	    .apu_gnt		(apu_gnt), //WAIT state in decoder, when gnt = 1 apu_operands_o, apu_op_o, apu_flags_o may change next cycle
 	    .apu_rvalid		(apu_rvalid),
 	    .clk		(clk_i),
@@ -263,7 +263,7 @@ module xava(
     assign apu_operands_i [1] = xif_issue.issue_req.instr; //scalar operands sent over apu bus but not xif...?
     assign apu_operands_i [2] = xif_issue.issue_req.instr; 
     assign xif_issue.issue_ready = apu_gnt; 
-    assign xif_issue.issue_valid = apu_req;
+    assign apu_req = xif_issue.issue_valid;
     assign xif_issue.issue_resp.accept = '1; //Is copro accepted by processor?
     assign xif_issue.issue_resp.writeback = '1; //Will copro writeback?
 
@@ -275,12 +275,12 @@ module xava(
     //RESULT INTERFACE
     //assign ?? = xif_result.result_ready; //apu result is ready...
     assign xif_result.result_valid = apu_rvalid;
-    assign xif_result.id = '0;
-    assign xif_result.data = apu_result;
-    assign xif_result.rd = '0;
-    assign xif_result.we = '1;
-    assign xif_result.float = '0;
-    assign xif_result.exc = '0;
-    assign xif_result.exccode = '0;
+    assign xif_result.result.id = '0;
+    assign xif_result.result.data = apu_result;
+    assign xif_result.result.rd = '0;
+    assign xif_result.result.we = '1;
+    assign xif_result.result.float = '0;
+    assign xif_result.result.exc = '0;
+    assign xif_result.result.exccode = '0;
 
 endmodule

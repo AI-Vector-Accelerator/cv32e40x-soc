@@ -21,6 +21,9 @@ PROJ_DIR     ?= $(PROJ_DIR_TMP)
 # main core directory
 CORE_DIR ?= $(SIM_DIR)/cv32e40x/
 
+#ava core directory
+AVA_DIR ?= $(SIM_DIR)/x-ava-core/
+
 # memory files
 PROG_PATHS_LIST ?= progs.csv
 
@@ -52,10 +55,10 @@ verilator: progs.csv
 	    -Wno-IMPLICIT -Wno-LITENDIAN -Wno-CASEINCOMPLETE -Wno-SYMRSVDWORD     \
 	    -Wno-BLKANDNBLK                                                       \
 	    -I$(SIM_DIR) -I$(CORE_DIR)/rtl/ -I$(CORE_DIR)/rtl/include             \
-	    -I$(CORE_DIR)/bhv/                                                    \
+	    -I$(CORE_DIR)/bhv/ -I$(AVA_DIR)/rtl/                                  \
 	    -GMEM_W=$(MEM_W)                                                      \
 	    --cc cv32e40x_pkg.sv if_xif.sv cv32e40x_wrapper.sv                    \
-	    cv32e40x_sim_clock_gate.sv cv32e40x_core.sv                           \
+	    cv32e40x_sim_clock_gate.sv cv32e40x_core.sv accelerator_pkg.sv        \
 	    --top-module cv32e40x_wrapper                                         \
 	    --clk clk_i $$trace --exe verilator_main.cpp;                         \
 	if [ "$$?" != "0" ]; then                                                 \

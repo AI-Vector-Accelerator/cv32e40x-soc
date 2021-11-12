@@ -87,31 +87,6 @@ assign apu_operands[0] = apu_operands_i[0];
 assign apu_operands[1] = apu_operands_i[1];
 assign apu_operands[2] = apu_operands_i[2];
 
-
-////////////////////////////////////////
-// eXtension interface
-if_xif.coproc_compressed xif_compressed,
-if_xif.coproc_issue      xif_issue,
-if_xif.coproc_commit     xif_commit,
-if_xif.coproc_mem        xif_mem,
-if_xif.coproc_mem_result xif_mem_result,
-if_xif.coproc_result     xif_result
-
-assign xif_compressed.compressed_ready = '0;
-assign xif_compressed.compressed_resp  = '0;
-assign xif_issue.issue_ready           = '1;
-assign xif_issue.issue_resp.accept     = '1;
-assign xif_issue.issue_resp.writeback  = '1;
-assign xif_issue.issue_resp.float      = '0;
-assign xif_issue.issue_resp.dualwrite  = '0;
-assign xif_issue.issue_resp.dualread   = '0;
-assign xif_issue.issue_resp.loadstore  = '0;
-assign xif_issue.issue_resp.exc        = '1;
-assign xif_mem.mem_valid               = '0;
-assign xif_mem.mem_req                 = '0;
-assign xif_result.result_valid         = xif_result.result_ready;
-assign xif_result.result               = '0;
-
 ////////////////////////////////////////
 // CSRs
 vector_csrs vcsrs0 (
