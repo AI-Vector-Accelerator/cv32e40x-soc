@@ -257,11 +257,9 @@ module xava(
 
     //ISSUE INTERFACE
     assign apu_req = xif_issue.issue_valid;
-    assign apu_operands_i [0] = xif_issue.issue_req.instr; //Contains instr...
-    assign apu_operands_i [0][19:15] = xif_issue.issue_req.rs[0]; //rs 1
-    assign apu_operands_i [0][24:20] = xif_issue.issue_req.rs[1]; //rs 2
-    assign apu_operands_i [1] = xif_issue.issue_req.instr; //scalar operands sent over apu bus but not xif...?
-    assign apu_operands_i [2] = xif_issue.issue_req.instr; 
+    assign apu_operands_i [0] = xif_issue.issue_req.instr; //Contains instr
+    assign apu_operands_i [1] = xif_issue.issue_req.rs[0]; //register operand 1
+    assign apu_operands_i [2] = xif_issue.issue_req.rs[1]; //register operand 2
     assign xif_issue.issue_ready = apu_gnt; 
     assign apu_req = xif_issue.issue_valid;
     assign xif_issue.issue_resp.accept = '1; //Is copro accepted by processor?
