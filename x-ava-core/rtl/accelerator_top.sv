@@ -21,6 +21,7 @@ module accelerator_top (
     output wire  [31:0] data_wdata_o,
     input  wire  [31:0] data_rdata_i,
     output wire         core_halt_o
+    output wire         vlsu_done_o
 );
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -60,7 +61,7 @@ wire wide_vs1;
 // VLSU OUTPUTS
 wire [127:0] vlsu_wdata;
 logic vec_reg_write_lsu;
-logic vlsu_done;
+//logic vlsu_done;
 logic [4:0] vl_next_comb;
 
 logic vlsu_en;
@@ -145,7 +146,7 @@ vector_decoder vdec0 (
     .vlsu_store_o(vlsu_store),
     .vlsu_strided_o(vlsu_strided),
     .vlsu_ready_i(vlsu_ready),
-    .vlsu_done_i(vlsu_done),
+    .vlsu_done_i(vlsu_done_o),
     .core_halt_o(core_halt_o)
 );
 
@@ -236,7 +237,7 @@ vector_lsu vlsu0 (
     .vlsu_store_i(vlsu_store),
     .vlsu_strided_i(vlsu_strided),
     .vlsu_ready_o(vlsu_ready),
-    .vlsu_done_o(vlsu_done),
+    .vlsu_done_o(vlsu_done_o),
 
     .data_req_o(data_req_o),
     .data_gnt_i(data_gnt_i),
