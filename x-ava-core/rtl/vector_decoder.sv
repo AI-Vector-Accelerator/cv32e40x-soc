@@ -29,12 +29,10 @@ module vector_decoder (
     output logic wide_vs1,
     input wire clk,
     input wire n_reset,
-    // e40x wrapper assigns assigns these APU signals with corresponding XIF signals
     input wire apu_req,
     input wire [31:0] apu_operands [2:0],
     input wire [5:0] apu_op,
     input wire [14:0] apu_flags_i,
-    input wire []
     input wire [4:0] vl,
     input wire [1:0] vsew,
     output logic vlsu_en_o,

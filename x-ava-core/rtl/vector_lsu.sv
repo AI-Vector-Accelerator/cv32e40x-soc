@@ -10,7 +10,7 @@ module vector_lsu (
     input  wire [1:0]   vlmul_i,
 
     // VLSU Decoded Control
-    input  wire         vlsu_en_i, // Based on decoded instruction, VLSU will be used
+    input  wire         vlsu_en_i,
     input  wire         vlsu_load_i,
     input  wire         vlsu_store_i,
     input  wire         vlsu_strided_i,
@@ -34,9 +34,9 @@ module vector_lsu (
     input  wire [31:0]  op1_data_i, // Stride
 
     // Wide vector register port
-    output logic [127:0] vs_wdata_o, // Write data over 4x32b port to registers after load
-    input  logic [127:0] vs_rdata_i, // Read data over 4x32b port to registers for store
-    input  logic [4:0] vr_addr_i, // Specifies which of the 32 registers we are reading from
+    output logic [127:0] vs_wdata_o,
+    input  logic [127:0] vs_rdata_i,
+    input  logic [4:0] vr_addr_i,
     output logic [4:0] vs3_addr_o, // Redirected vector register address
     output logic vr_we_o
 );
@@ -65,9 +65,9 @@ module vector_lsu (
 
     always_comb begin
 		  data_wdata_o = 'd0;
-        case(vsew_i) //Remember, only 32b of bandwidth for memory access - Can write 4 bytes, 2 half-words, or one word at a time
+        case(vsew_i)
             2'd0 : begin
-                data_wdata_o = {vs_rdata_i[103:96], vs_rdata_i[71:64], vs_rdata_i[39:32], vs_rdata_i[7:0]}; //Write first bytes from each of 4 x 32b vector register reads
+                data_wdata_o = {vs_rdata_i[103:96], vs_rdata_i[71:64], vs_rdata_i[39:32], vs_rdata_i[7:0]};
             end
             2'd1 : begin
                 case(vs3_addr_o[0])
@@ -104,12 +104,12 @@ module vector_lsu (
     logic [2:0] store_cycles, store_cycles_cnt;
 
     assign stride = vlsu_strided_i ? op1_data_i : (32'd1 << vsew_i);
-    assign data_addr_o = vlsu_store_i ? ({cycle_addr[31:2], 2'd0} + (store_cycles_cnt << 2)) : {cycle_addr[31:2], 2'd0}; //If storing, write address uses store_cycle_cnt to increment the byte to which it is writing in each cycle
+    assign data_addr_o = vlsu_store_i ? ({cycle_addr[31:2], 2'd0} + (store_cycles_cnt << 2)) : {cycle_addr[31:2], 2'd0};
     assign au_be = be_gen;
     assign vd_offset = (vl_i << vsew_i) - byte_track;
 
     always_comb begin
-        if(byte_track >= 4) //Which bytes are overwritten in a 32b word in memory for 'store'
+        if(byte_track >= 4)
             store_cycle_be = 4'b1111;
         else if(byte_track >= 3)
             store_cycle_be = 4'b0111;
@@ -150,7 +150,7 @@ module vector_lsu (
             cycle_addr <= cycle_addr;
     end
 
-    assign store_cycles = (vl_i >> 2-vsew_i)+1; //Why '+1'?
+    assign store_cycles = (vl_i >> 2-vsew_i)+1;
     assign vs3_addr_o = vr_addr_i + store_cycles_cnt;
     always_ff @(posedge clk, negedge n_reset) begin
         if(~n_reset)
