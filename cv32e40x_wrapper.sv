@@ -90,6 +90,17 @@ module cv32e40x_wrapper #(
         .core_sleep_o        (              )
     );
 
+    // Data read/write for Vector Unit
+    logic                vdata_gnt;
+    logic                vdata_rvalid;
+    logic                vdata_err;
+    logic [31:0]         vdata_rdata;
+    logic                vdata_req;
+    logic [31:0]         vdata_addr;
+    logic                vdata_we;
+    logic [3:0]          vdata_be;
+    logic [31:0]         vdata_wdata;
+
     xava ext (
         .clk_i          ( clk_i  ),
         .rst_ni         ( rst_ni ),
@@ -98,8 +109,81 @@ module cv32e40x_wrapper #(
         .xif_commit     ( ext_if ),
         .xif_mem        ( ext_if ),
         .xif_mem_result ( ext_if ),
-        .xif_result     ( ext_if )
+        .xif_result     ( ext_if ),
+	
+	.data_req_o       ( vdata_req          ),
+        .data_gnt_i       ( vdata_gnt          ),
+        .data_rvalid_i    ( vdata_rvalid       ),
+        .data_rdata_i     ( vdata_rdata        ),
+        .data_addr_o      ( vdata_addr         ),
+        .data_we_o        ( vdata_we           ),
+        .data_be_o        ( vdata_be           ),
+        .data_wdata_o     ( vdata_wdata        )
+
     );
+
+
+    // Data arbiter for main core and vector unit
+    logic              sdata_hold;
+    logic              data_req;
+    logic [31:0]       data_addr;
+    logic              data_we;
+    logic [3:0]        data_be;
+    logic [31:0]       data_wdata;
+    logic              data_gnt;
+    logic              data_rvalid;
+    logic              data_err;
+    logic [31:0]       data_rdata;
+    logic              sdata_waiting, vdata_waiting;
+    logic [31:0]       sdata_wait_addr;
+    //assign sdata_hold = vdata_req | vect_pending_store | (vect_pending_load & sdata_we);
+    assign sdata_hold = vdata_req;
+
+    always_comb begin
+        data_req   = vdata_req | (dmem_req & ~sdata_hold);
+        data_addr  = dmem_addr;
+        data_we    = dmem_we;
+        data_be    = {{(MEM_W-32){1'b0}}, dmem_be} << (dmem_addr[$clog2(MEM_W/8)-1:0] & {{$clog2(MEM_W/32){1'b1}}, 2'b00});
+        data_wdata = '0;
+        for (int i = 0; i < MEM_W / 32; i++) begin
+            data_wdata[32*i +: 32] = dmem_wdata;
+        end
+        if (vdata_req) begin
+            data_addr  = vdata_addr;
+            data_we    = vdata_we;
+            data_be    = vdata_be;
+            data_wdata = vdata_wdata;
+        end
+    end
+    assign sdata_gnt = data_gnt & dmem_req & ~sdata_hold;
+    assign vdata_gnt = data_gnt & vdata_req;
+    always_ff @(posedge clk_i or negedge rst_ni) begin
+        if (~rst_ni) begin
+            sdata_waiting   <= 1'b0;
+            vdata_waiting   <= 1'b0;
+            sdata_wait_addr <= '0;
+        end else begin
+            if (sdata_gnt) begin
+                sdata_waiting   <= 1'b1;
+                sdata_wait_addr <= dmem_addr;
+            end
+            else if (sdata_rvalid) begin
+                sdata_waiting <= 1'b0;
+            end
+            if (vdata_gnt) begin
+                vdata_waiting <= ~vdata_we; // vector processor expects rvalid only for reads
+            end
+            else if (vdata_rvalid) begin
+                vdata_waiting <= 1'b0;
+            end
+        end
+    end
+    assign sdata_rvalid = sdata_waiting & data_rvalid;
+    assign vdata_rvalid = vdata_waiting & data_rvalid;
+    assign sdata_err    = data_err;
+    assign vdata_err    = data_err;
+    assign sdata_rdata  = data_rdata[(sdata_wait_addr[$clog2(MEM_W/8)-1:0] & {{$clog2(MEM_W/32){1'b1}}, 2'b00})*8 +: 32];
+    assign vdata_rdata  = data_rdata;
 
 
     ///////////////////////////////////////////////////////////////////////////
@@ -195,7 +279,19 @@ module xava(
     if_xif.coproc_commit     xif_commit, //commit_valid, commit pkt
     if_xif.coproc_mem        xif_mem, //mem_valid, mem_ready, req and resp pkt
     if_xif.coproc_mem_result xif_mem_result, //output mem_result_valid, output mem_result, mem result sent to 
-    if_xif.coproc_result     xif_result //result_valid, result_ready, result pkt
+    if_xif.coproc_result     xif_result, //result_valid, result_ready, result pkt
+
+    // vector memory interface
+    output logic                  data_req_o,
+    input  logic                  data_gnt_i,
+    input  logic                  data_rvalid_i,
+    //input  logic                  data_err_i,
+    input  logic [31:0]           data_rdata_i,
+    output logic [31:0]           data_addr_o,
+    output logic                  data_we_o,
+    output logic [3:0]            data_be_o,
+    output logic [31:0]           data_wdata_o
+
     );
     
     //Instantiate accelerator top and adaptor
@@ -208,14 +304,14 @@ module xava(
     wire  [2:0][31:0] apu_operands_i;
     wire  [5:0]  apu_op;
     wire  [14:0] apu_flags_i;
-    wire         data_req_o;
-    wire         data_gnt_i;
-    wire         data_rvalid_i;
-    wire         data_we_o;
-    wire  [3:0]  data_be_o;
-    wire  [31:0] data_addr_o;
-    wire  [31:0] data_wdata_o;
-    wire  [31:0] data_rdata_i;
+    //wire         data_req_o;
+    //wire         data_gnt_i;
+    //wire         data_rvalid_i;
+    //wire         data_we_o;
+    //wire  [3:0]  data_be_o;
+    //wire  [31:0] data_addr_o;
+    //wire  [31:0] data_wdata_o;
+    //wire  [31:0] data_rdata_i;
     wire         core_halt_o;
 
 

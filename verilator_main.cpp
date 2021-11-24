@@ -146,8 +146,8 @@ int main(int argc, char **argv) {
             top->rst_ni = 1;
             top->eval();
 
-            //int end_cnt = 0;
-            int end_cnt = 1;
+            int end_cnt = 0;
+            //int end_cnt = 1;
             while (end_cnt < extra_cycles) {
                 // read memory request
                 int addr = (top->mem_addr_o % mem_sz) & ~(mem_w/8-1);
