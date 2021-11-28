@@ -203,9 +203,11 @@ module xava(
     wire  [4:0]  apu_flags_o;
     wire          apu_gnt;
     wire         apu_rvalid;
+    wire  [X_ID_WIDTH-1:0]       instruction_id;
     
     wire         apu_req;
     wire  [2:0][31:0] apu_operands_i;
+    wire  [X_ID_WIDTH-1:0] offloaded_id_i;
     wire  [5:0]  apu_op;
     wire  [14:0] apu_flags_i;
     wire         data_req_o;
@@ -222,14 +224,16 @@ module xava(
 
     accelerator_top acctop0(
         .apu_result        (apu_result),
-        .apu_flags_o    (apu_flag_o), //nothing returned to interface/cpu, maybe use for something else?
-        .apu_gnt        (apu_gnt), //WAIT state in decoder, when gnt = 1 apu_operands_o, apu_op_o, apu_flags_o may change next cycle
-        .apu_rvalid        (apu_rvalid),
+        .apu_flags_o        (apu_flag_o), //nothing returned to interface/cpu, maybe use for something else?
+        .apu_gnt            (apu_gnt), //WAIT state in decoder, when gnt = 1 apu_operands_o, apu_op_o, apu_flags_o may change next cycle
+        .apu_rvalid         (apu_rvalid),
+        .instruction_id         (instruction_id),
         .clk        (clk_i),
         .n_reset        (rst_ni),
         .apu_req        (apu_req), // && xif_issue.issue_ready), //ready for new instructions (revisit)
         .apu_operands_i    (apu_operands_i), //this contains the funct3, major_opcode, funct6, source1, source2, destination fields
         //...of type wire [2:0][31:0];
+        .offloaded_id_i     (offloaded_id_i),
         .apu_op        (apu_op), //this tells the core what apu op is required but not used within ava...
         .apu_flags_i    (apu_flags_i), //again this is meant to pass in flags, just stored and not used
 
@@ -260,13 +264,13 @@ module xava(
     assign xif_compressed.compressed_resp  = '0;
 
     //ISSUE INTERFACE
-    // 20/11/21 - ID generation now exists in IF stage on core, but need to add datapath capacity for ID to AVA 
+    // 20/11/21 - ID generation now exists in IF stage on core,
     assign apu_req = xif_issue.issue_valid;
+    assign offloaded_if_i = xif_issue.issue_req_id;
     assign apu_operands_i [0] = xif_issue.issue_req.instr; //Contains instr
     assign apu_operands_i [1] = xif_issue.issue_req.rs[0]; //register operand 1
     assign apu_operands_i [2] = xif_issue.issue_req.rs[1]; //register operand 2
     assign xif_issue.issue_ready = apu_gnt;
-    assign apu_req = xif_issue.issue_valid;
     assign xif_issue.issue_resp.accept = '1; //Is copro accepted by processor?
     assign xif_issue.issue_resp.writeback = '1; //Will copro writeback?
 
@@ -278,7 +282,7 @@ module xava(
     //RESULT INTERFACE
     //assign ?? = xif_result.result_ready; //apu result is ready...
     assign xif_result.result_valid = apu_rvalid;
-    assign xif_result.result.id = '0;
+    assign xif_result.result.id = instruction_id;
     assign xif_result.result.data = apu_result;
     assign xif_result.result.rd = '0;
     assign xif_result.result.we = '1;
@@ -288,7 +292,7 @@ module xava(
     
     // MEMORY (REQUEST/RESPONSE) INTERFACE
     assign xif_mem.mem_valid = data_req_o;
-    assign xif_mem.mem_req.id = '0;
+    assign xif_mem.mem_req.id = instruction_id;
     assign xif_mem.mem_req.addr = data_addr_o;
     assign xif_mem.mem_req.mode = 2'b11; // Machine-level privilege, as specified in issue interface signal from id/ex pipeline.
     assign xif_mem.mem_req.we = data_we_o;
@@ -296,7 +300,7 @@ module xava(
     assign xif_mem.mem_req.wdata = data_wdata_o;
     assign xif_mem.mem_req.last = vlsu_done_o;
     assign xif_mem.mem_req.spec = '0; //((!xif_commit.commit.commit_kill)&&(xif_commit.commit.id == xif_mem.mem_req_id))
-                                        // Set to committed so that any errors coming back from CPU regarding access to mem are flagged
+                                        // Set to committed so that any errors coming back from CPU regarding access to mem are a real red flag
     
     
     // MEMORY RESULT INTERFACE

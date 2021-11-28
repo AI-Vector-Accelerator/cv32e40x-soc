@@ -1,5 +1,6 @@
 // `include "defs.sv"
 import accelerator_pkg::*;
+import if_xif::*;
 
 module accelerator_top (
     output logic  [31:0] apu_result,
@@ -10,6 +11,7 @@ module accelerator_top (
     input  wire         n_reset,
     input  wire         apu_req,
     input  wire  [2:0][31:0] apu_operands_i,
+    input  wire  [X_ID_WIDTH-1:0]       offloaded_id_i,
     input  wire  [5:0]  apu_op,
     input  wire  [14:0] apu_flags_i,
     output wire         data_req_o,
@@ -20,8 +22,9 @@ module accelerator_top (
     output wire  [31:0] data_addr_o,
     output wire  [31:0] data_wdata_o,
     input  wire  [31:0] data_rdata_i,
-    output wire         core_halt_o
-    output wire         vlsu_done_o
+    output wire         core_halt_o,
+    output wire         vlsu_done_o,
+    output wire [X_ID_WIDTH-1:0]       instruction_id
 );
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -84,9 +87,13 @@ wire [127:0] replicated_scalar;
 ////////////////////////////////////////////////////////////////////////////////
 
 wire [31:0] apu_operands [2:0];
+wire [X_ID_WIDTH-1:0] offloaded_id;
 assign apu_operands[0] = apu_operands_i[0];
 assign apu_operands[1] = apu_operands_i[1];
 assign apu_operands[2] = apu_operands_i[2];
+
+assign offloaded_id = offloaded_id_i;
+
 
 ////////////////////////////////////////
 // CSRs
@@ -113,6 +120,7 @@ vector_decoder vdec0 (
     .scalar_operand1(scalar_operand1),
     .scalar_operand2(scalar_operand2),
     .immediate_operand(immediate_operand),
+    .instruction_id(instruction_id),
     .vs1_addr(vs1_addr),
     .vs2_addr(vs2_addr),
     .vd_addr(vd_addr),
@@ -137,6 +145,7 @@ vector_decoder vdec0 (
     .n_reset(n_reset),
     .apu_req(apu_req),
     .apu_operands(apu_operands),
+    .offloaded_id(offloaded_id),
     .apu_op(apu_op),
     .apu_flags_i(apu_flags_i),
     .vl(vl),
