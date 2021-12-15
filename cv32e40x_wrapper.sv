@@ -42,7 +42,9 @@ module cv32e40x_wrapper #(
         .X_MISA      ( '0 )
     ) ext_if();
 
-    cv32e40x_core core (
+    cv32e40x_core #(
+    	.X_EXT               ( 1'b1         )
+         ) core (
         .clk_i               ( clk_i        ),
         .rst_ni              ( rst_ni       ),
         .scan_cg_en_i        ( 1'b0         ),
@@ -368,7 +370,7 @@ module xava(
 
     //RESULT INTERFACE
     //assign ?? = xif_result.result_ready; //apu result is ready...
-    assign xif_result.result_valid = apu_rvalid;
+    assign xif_result.result_valid = (apu_rvalid || !core_halt_o);
     assign xif_result.result.id = '0;
     assign xif_result.result.data = apu_result;
     assign xif_result.result.rd = '0;
