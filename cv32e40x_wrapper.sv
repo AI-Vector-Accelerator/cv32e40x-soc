@@ -22,16 +22,17 @@ module cv32e40x_wrapper #(
     logic [MEM_W-1:0] imem_rdata;
     logic             imem_err;
 
-    logic               dmem_req;
-    logic               dmem_gnt;
-    logic [31:0]        dmem_addr;
-    logic               dmem_we;
+    logic               dmem_req; //connect to 'mem_valid' incoming handshake (<-)
+    logic               dmem_gnt; //connect to 'mem_ready' outgoing (->)
+    logic [31:0]        dmem_addr; // <- 'mem_req.addr'
+    logic               dmem_we; // <- 'mem_req.we'
     logic [MEM_W/8-1:0] dmem_be;
-    logic [MEM_W  -1:0] dmem_wdata;
-    logic               dmem_rvalid;
-    logic [MEM_W  -1:0] dmem_rdata;
-    logic               dmem_err;
+    logic [MEM_W  -1:0] dmem_wdata; // 'mem_req.wdata'
+    logic               dmem_rvalid; // -> 'mem_result_valid'
+    logic [MEM_W  -1:0] dmem_rdata; // -> 'mem_result.rdata'
+    logic               dmem_err; // -> 'mem_result.err'
 
+    logic [1:0]         dmem_size;  // <- 'mem_req.size' - Specific to XIF, use instead of 'dmem_be' in such cases
 
     // eXtension Interface
     if_xif #(
@@ -109,20 +110,20 @@ module cv32e40x_wrapper #(
         mem_req_o   = imem_req | dmem_req;
         mem_addr_o  = imem_addr;
         mem_we_o    = 1'b0;
-        mem_be_o    = dmem_be;
-        mem_wdata_o = dmem_wdata;
-        if (dmem_req) begin
+        mem_be_o    = dmem_be; //byte enables only relevant for data mem accesses
+        mem_wdata_o = dmem_wdata; //instr accesses are only fetches
+        if (dmem_req) begin // Seems like data memory access has priority in the case of simulataneous data/instr requests?
             mem_we_o   = dmem_we;
             mem_addr_o = dmem_addr;
         end
     end
-    assign imem_gnt = imem_req & ~dmem_req;
+    assign imem_gnt = imem_req & ~dmem_req; // Ah yep, seems to be confirmed here
     assign dmem_gnt =             dmem_req;
 
     // shift register keeping track of the source of mem requests for up to 32 cycles
-    logic        req_sources  [32];
+    logic        req_sources  [32]; //data or instr req?
     logic [31:0] imem_req_addr[32]; // keeping track of address for instruction memory requests
-    logic [4:0]  req_count;
+    logic [4:0]  req_count; // keeps track of number of queued requests (And therein where in shift register to write new requests to)
     always_ff @(posedge clk_i or negedge rst_ni) begin
         if (~rst_ni) begin
             req_count <= '0;
@@ -132,7 +133,7 @@ module cv32e40x_wrapper #(
                     req_sources  [i] <= req_sources  [i+1];
                     imem_req_addr[i] <= imem_req_addr[i+1];
                 end
-                if (~imem_gnt & ~dmem_gnt) begin
+                if (~imem_gnt & ~dmem_gnt) begin //i.e. No memory access requests
                     req_count <= req_count - 1;
                 end else begin
                     req_sources  [req_count-1] <= dmem_gnt;

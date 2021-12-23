@@ -1,6 +1,6 @@
 // `include "defs.sv"
 import accelerator_pkg::*;
-import if_xif::*;
+'include "if_xif.sv"
 
 module accelerator_top (
     output logic  [31:0] apu_result,
