@@ -1,8 +1,9 @@
 // `include "defs.sv"
 import accelerator_pkg::*;
-'include "if_xif.sv"
 
-module accelerator_top (
+module accelerator_top	#(
+	parameter int unsigned	X_ID_WIDTH = 4
+)(
     output logic  [31:0] apu_result,
     output logic  [4:0]  apu_flags_o,
     output logic         apu_gnt,

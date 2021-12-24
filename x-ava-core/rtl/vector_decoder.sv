@@ -1,7 +1,9 @@
 // `include "defs.sv"
 import accelerator_pkg::*;
-import if_xif::*;
-module vector_decoder (
+//import if_xif::*;
+module vector_decoder #(
+	parameter int unsigned	X_ID_WIDTH = 4
+)(
     output logic apu_rvalid,
     output logic apu_gnt,
     output logic [31:0] scalar_operand1,
@@ -36,7 +38,6 @@ module vector_decoder (
     input wire [X_ID_WIDTH-1:0] offloaded_id,
     input wire [5:0] apu_op,
     input wire [14:0] apu_flags_i,
-    input wire []
     input wire [4:0] vl,
     input wire [1:0] vsew,
     output logic vlsu_en_o,
