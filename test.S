@@ -9,11 +9,42 @@ main:
     la              a0, vdata_start
 
 
-    li t1, 64
+    li t1, 10
+
+    #lw t0, (a0)
+
     vsetvli t0, t1, e8, m1
     vmv.v.i v1, 8
     vmv.v.i v2, 7
     vadd.vv v3, v1, v2
+
+    vsub.vv v3, v3, v1
+    vmul.vv v4, v1, v2
+    vand.vv v5, v1, v2
+    vor.vv v6, v1, v2
+    vxor.vv v7, v1, v2
+
+    vsrl.vi v8, v1, 2
+    vsra.vi v9, v2, 2
+    vsll.vi v10, v1, 2
+
+    vmax.vx v11, v1, t1
+    vmin.vx v12, v2, t1
+    vsmul.vv v13, v1, v2
+    vadd.vx v14, v1, t1
+    vsadd.vv v15, v1, v2
+    vmv.v.x v16, t1
+    vmv.x.s t2, v1
+
+    vwmul.vv v17, v1, v2  
+    #vwmul.vx v18, t2, v2
+   
+    #sw t1, (a2)
+
+    vse.v v1, (a2) 
+    vle.v v19, (a2)
+    #vlse.v v1, (a2), a1
+    
 
     la              a0, vdata_start
     la              a1, vdata_end

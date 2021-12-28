@@ -29,9 +29,30 @@ module cv32e40x_wrapper #(
     logic [MEM_W/8-1:0] dmem_be;
     logic [MEM_W  -1:0] dmem_wdata;
     logic               dmem_rvalid;
+    logic               dmem_wvalid;
     logic [MEM_W  -1:0] dmem_rdata;
     logic               dmem_err;
 
+
+    // cv32e40x signals
+    // Instruction fetch interface
+    logic        instr_req;
+    logic [31:0] instr_addr;
+    logic        instr_gnt;
+    logic        instr_rvalid;
+    logic        instr_err;
+    logic [31:0] instr_rdata;
+
+    // Data load & store interface
+    logic        sdata_req;
+    logic [31:0] sdata_addr;
+    logic        sdata_we;
+    logic  [3:0] sdata_be;
+    logic [31:0] sdata_wdata;
+    logic        sdata_gnt;
+    logic        sdata_rvalid;
+    logic        sdata_err;
+    logic [31:0] sdata_rdata;
 
     // eXtension Interface
     if_xif #(
@@ -54,25 +75,25 @@ module cv32e40x_wrapper #(
         .hart_id_i           ( '0           ),
         .dm_exception_addr_i ( '0           ),
         .nmi_addr_i          ( '0           ),
-        .instr_req_o         ( imem_req     ),
-        .instr_gnt_i         ( imem_gnt     ),
-        .instr_rvalid_i      ( imem_rvalid  ),
-        .instr_addr_o        ( imem_addr    ),
+        .instr_req_o         ( instr_req    ),
+        .instr_gnt_i         ( instr_gnt     ),
+        .instr_rvalid_i      ( instr_rvalid  ),
+        .instr_addr_o        ( instr_addr    ),
         .instr_memtype_o     (              ),
         .instr_prot_o        (              ),
-        .instr_rdata_i       ( imem_rdata   ),
-        .instr_err_i         ( imem_err     ),
-        .data_req_o          ( dmem_req     ),
-        .data_gnt_i          ( dmem_gnt     ),
-        .data_rvalid_i       ( dmem_rvalid  ),
-        .data_we_o           ( dmem_we      ),
-        .data_be_o           ( dmem_be      ),
-        .data_addr_o         ( dmem_addr    ),
+        .instr_rdata_i       ( instr_rdata   ),
+        .instr_err_i         ( instr_err     ),
+        .data_req_o          ( sdata_req     ),
+        .data_gnt_i          ( sdata_gnt     ),
+        .data_rvalid_i       ( sdata_rvalid  ),
+        .data_we_o           ( sdata_we      ),
+        .data_be_o           ( sdata_be      ),
+        .data_addr_o         ( sdata_addr    ),
         .data_memtype_o      (              ),
         .data_prot_o         (              ),
-        .data_wdata_o        ( dmem_wdata   ),
-        .data_rdata_i        ( dmem_rdata   ),
-        .data_err_i          ( dmem_err     ),
+        .data_wdata_o        ( sdata_wdata   ),
+        .data_rdata_i        ( sdata_rdata   ),
+        .data_err_i          ( sdata_err     ),
         .data_atop_o         (              ),
         .data_exokay_i       ( 1'b0         ),
         .xif_compressed_if   ( ext_if       ),
@@ -142,13 +163,13 @@ module cv32e40x_wrapper #(
     assign sdata_hold = vdata_req;
 
     always_comb begin
-        data_req   = vdata_req | (dmem_req & ~sdata_hold);
-        data_addr  = dmem_addr;
-        data_we    = dmem_we;
-        data_be    = {{(MEM_W-32){1'b0}}, dmem_be} << (dmem_addr[$clog2(MEM_W/8)-1:0] & {{$clog2(MEM_W/32){1'b1}}, 2'b00});
+        data_req   = vdata_req | (sdata_req & ~sdata_hold);
+        data_addr  = sdata_addr;
+        data_we    = sdata_we;
+        data_be    = {{(MEM_W-32){1'b0}}, sdata_be} << (sdata_addr[$clog2(MEM_W/8)-1:0] & {{$clog2(MEM_W/32){1'b1}}, 2'b00});
         data_wdata = '0;
         for (int i = 0; i < MEM_W / 32; i++) begin
-            data_wdata[32*i +: 32] = dmem_wdata;
+            data_wdata[32*i +: 32] = sdata_wdata;
         end
         if (vdata_req) begin
             data_addr  = vdata_addr;
@@ -157,7 +178,7 @@ module cv32e40x_wrapper #(
             data_wdata = vdata_wdata;
         end
     end
-    assign sdata_gnt = data_gnt & dmem_req & ~sdata_hold;
+    assign sdata_gnt = data_gnt & sdata_req & ~sdata_hold;
     assign vdata_gnt = data_gnt & vdata_req;
     always_ff @(posedge clk_i or negedge rst_ni) begin
         if (~rst_ni) begin
@@ -167,7 +188,7 @@ module cv32e40x_wrapper #(
         end else begin
             if (sdata_gnt) begin
                 sdata_waiting   <= 1'b1;
-                sdata_wait_addr <= dmem_addr;
+                sdata_wait_addr <= sdata_addr;
             end
             else if (sdata_rvalid) begin
                 sdata_waiting <= 1'b0;
@@ -186,6 +207,26 @@ module cv32e40x_wrapper #(
     assign vdata_err    = data_err;
     assign sdata_rdata  = data_rdata[(sdata_wait_addr[$clog2(MEM_W/8)-1:0] & {{$clog2(MEM_W/32){1'b1}}, 2'b00})*8 +: 32];
     assign vdata_rdata  = data_rdata;
+
+    //Assign instruction memory, no cache
+    assign imem_req     = instr_req;
+    assign imem_addr    = instr_addr;
+    assign instr_gnt    = imem_gnt;
+    assign instr_rvalid = imem_rvalid;
+    assign instr_rdata  = imem_rdata[31:0];
+    assign instr_err    = imem_err;
+    
+    //Assign data memory, no cache
+    assign dmem_req    = data_req;
+    assign dmem_addr   = data_addr;
+    assign dmem_we     = data_we;
+    assign dmem_be     = data_be;
+    assign dmem_wdata  = data_wdata;
+    assign data_gnt    = dmem_gnt;
+    //assign data_rvalid = dmem_rvalid;
+    assign data_rvalid = dmem_rvalid | dmem_wvalid;
+    assign data_rdata  = dmem_rdata;
+    assign data_err    = dmem_err;
 
 
     ///////////////////////////////////////////////////////////////////////////
@@ -208,6 +249,7 @@ module cv32e40x_wrapper #(
     // shift register keeping track of the source of mem requests for up to 32 cycles
     logic        req_sources  [32];
     logic [31:0] imem_req_addr[32]; // keeping track of address for instruction memory requests
+    logic        req_write    [32]; // keeping track of whether the request was a write
     logic [4:0]  req_count;
     always_ff @(posedge clk_i or negedge rst_ni) begin
         if (~rst_ni) begin
@@ -233,7 +275,8 @@ module cv32e40x_wrapper #(
         end
     end
     assign imem_rvalid = mem_rvalid_i & ~req_sources[0];
-    assign dmem_rvalid = mem_rvalid_i &  req_sources[0];
+    assign dmem_rvalid = mem_rvalid_i &  req_sources[0] & ~req_write[0];
+    assign dmem_wvalid = mem_rvalid_i &  req_sources[0] & req_write[0];
     assign imem_err    = mem_err_i;
     assign dmem_err    = mem_err_i;
     assign imem_rdata  = mem_rdata_i[(imem_req_addr[0][$clog2(MEM_W/8)-1:0] & {{$clog2(MEM_W/32){1'b1}}, 2'b00})*8 +: 32];
