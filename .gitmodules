@@ -1,2 +1,5 @@
 
 
+[submodule "cv32e40x"]
+	path = cv32e40x
+	url = git@github.com:AI-Vector-Accelerator/cv32e40x.git

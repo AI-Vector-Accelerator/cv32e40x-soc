@@ -7,11 +7,12 @@
     .global main
 main:
     la              a0, vdata_start
-    li t1, 64
+    li t1, 32
     vsetvli t0, t1, e8, m1
     vmv.v.i v1, 8
     vmv.v.i v2, 7
-    vadd.vv v3, v1, v2
+    vse.v v1, (a2) 
+    vle.v v19, (a2)
 
     la              a0, vdata_start
     la              a1, vdata_end
