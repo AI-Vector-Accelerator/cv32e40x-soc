@@ -1,7 +1,9 @@
 // `include "defs.sv"
 import accelerator_pkg::*;
 
-module accelerator_top (
+module accelerator_top	#(
+	parameter int unsigned	X_ID_WIDTH = 4
+)(
     output logic  [31:0] apu_result,
     output logic  [4:0]  apu_flags_o,
     output logic         apu_gnt,
@@ -10,6 +12,7 @@ module accelerator_top (
     input  wire         n_reset,
     input  wire         apu_req,
     input  wire  [2:0][31:0] apu_operands_i,
+    input  wire  [X_ID_WIDTH-1:0]       offloaded_id_i,
     input  wire  [5:0]  apu_op,
     input  wire  [14:0] apu_flags_i,
     output wire         data_req_o,
@@ -20,7 +23,9 @@ module accelerator_top (
     output wire  [31:0] data_addr_o,
     output wire  [31:0] data_wdata_o,
     input  wire  [31:0] data_rdata_i,
-    output wire         core_halt_o
+    output wire         core_halt_o,
+    output wire         vlsu_done_o,
+    output wire [X_ID_WIDTH-1:0]       instruction_id
 );
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -60,7 +65,7 @@ wire wide_vs1;
 // VLSU OUTPUTS
 wire [127:0] vlsu_wdata;
 logic vec_reg_write_lsu;
-logic vlsu_done;
+//logic vlsu_done;
 logic [4:0] vl_next_comb;
 
 logic vlsu_en;
@@ -83,9 +88,13 @@ wire [127:0] replicated_scalar;
 ////////////////////////////////////////////////////////////////////////////////
 
 wire [31:0] apu_operands [2:0];
+wire [X_ID_WIDTH-1:0] offloaded_id;
 assign apu_operands[0] = apu_operands_i[0];
 assign apu_operands[1] = apu_operands_i[1];
 assign apu_operands[2] = apu_operands_i[2];
+
+assign offloaded_id = offloaded_id_i;
+
 
 ////////////////////////////////////////
 // CSRs
@@ -112,6 +121,7 @@ vector_decoder vdec0 (
     .scalar_operand1(scalar_operand1),
     .scalar_operand2(scalar_operand2),
     .immediate_operand(immediate_operand),
+    .instruction_id(instruction_id),
     .vs1_addr(vs1_addr),
     .vs2_addr(vs2_addr),
     .vd_addr(vd_addr),
@@ -136,6 +146,7 @@ vector_decoder vdec0 (
     .n_reset(n_reset),
     .apu_req(apu_req),
     .apu_operands(apu_operands),
+    .offloaded_id(offloaded_id),
     .apu_op(apu_op),
     .apu_flags_i(apu_flags_i),
     .vl(vl),
@@ -145,7 +156,7 @@ vector_decoder vdec0 (
     .vlsu_store_o(vlsu_store),
     .vlsu_strided_o(vlsu_strided),
     .vlsu_ready_i(vlsu_ready),
-    .vlsu_done_i(vlsu_done),
+    .vlsu_done_i(vlsu_done_o),
     .core_halt_o(core_halt_o)
 );
 
@@ -236,7 +247,7 @@ vector_lsu vlsu0 (
     .vlsu_store_i(vlsu_store),
     .vlsu_strided_i(vlsu_strided),
     .vlsu_ready_o(vlsu_ready),
-    .vlsu_done_o(vlsu_done),
+    .vlsu_done_o(vlsu_done_o),
 
     .data_req_o(data_req_o),
     .data_gnt_i(data_gnt_i),

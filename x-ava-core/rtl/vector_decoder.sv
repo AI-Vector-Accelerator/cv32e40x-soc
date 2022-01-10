@@ -1,12 +1,15 @@
 // `include "defs.sv"
 import accelerator_pkg::*;
-
-module vector_decoder (
+//import if_xif::*;
+module vector_decoder #(
+	parameter int unsigned	X_ID_WIDTH = 4
+)(
     output logic apu_rvalid,
     output logic apu_gnt,
     output logic [31:0] scalar_operand1,
     output logic [31:0] scalar_operand2,
     output logic [10:0] immediate_operand,
+    output logic [X_ID_WIDTH-1:0] instruction_id,
     output logic [4:0] vs1_addr,
     output logic [4:0] vs2_addr,
     output logic [4:0] vd_addr,
@@ -29,8 +32,10 @@ module vector_decoder (
     output logic wide_vs1,
     input wire clk,
     input wire n_reset,
+    // e40x wrapper assigns assigns these APU signals with corresponding XIF signals
     input wire apu_req,
     input wire [31:0] apu_operands [2:0],
+    input wire [X_ID_WIDTH-1:0] offloaded_id,
     input wire [5:0] apu_op,
     input wire [14:0] apu_flags_i,
     input wire [4:0] vl,
@@ -54,6 +59,7 @@ logic fix_vd_addr;
 logic [31:0] reg_apu_operands [2:0];
 logic [5:0] reg_apu_op;
 logic [14:0] reg_apu_flags_i;
+logic [X_ID_WIDTH-1:0] reg_offloaded_id; // Now stores ID of offloaded instruction, to be used in outgoing memory transactions and when returning results
 
 // Assign variables for individual parts of instructions for readability
 logic [2:0] funct3;
@@ -63,6 +69,7 @@ logic [4:0] source1;
 logic [4:0] source2;
 logic [4:0] destination;
 logic [2:0] mop; // Vector Addressing Mode
+
 assign funct3 = reg_apu_operands[0][14:12];
 assign major_opcode = reg_apu_operands[0][6:0];
 assign funct6 = reg_apu_operands[0][31:26];
@@ -71,14 +78,17 @@ assign source2 = reg_apu_operands[0][24:20];
 assign destination = reg_apu_operands[0][11:7];
 assign mop = funct6[2:0];
 
+
 assign scalar_operand1 = reg_apu_operands[1];
 assign scalar_operand2 = reg_apu_operands[2];
+assign instruction_id = reg_offloaded_id;
 
 always_ff @(posedge clk, negedge n_reset)
     if(~n_reset)
     begin
         state <= WAIT;
         reg_apu_operands <= '{3{'0}};
+        reg_offloaded_id <= '0;
         reg_apu_op <= '0;
         reg_apu_flags_i <= '0;
     end
@@ -94,8 +104,10 @@ always_ff @(posedge clk, negedge n_reset)
             reg_apu_operands[0] <= apu_operands[0];
             reg_apu_operands[1] <= apu_operands[1];
             reg_apu_operands[2] <= apu_operands[2];
+            reg_offloaded_id <= offloaded_id;
             reg_apu_op <= apu_op;
             reg_apu_flags_i <= apu_flags_i;
+            
         end
     end
 

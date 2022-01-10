@@ -7,8 +7,6 @@
     .global main
 main:
     la              a0, vdata_start
-
-
     li t1, 64
     vsetvli t0, t1, e8, m1
     vmv.v.i v1, 8

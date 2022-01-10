@@ -35,6 +35,7 @@ module temporary_reg (
     end
 
     // Packed read bytes, shift higher elements down
+    // e.g. If byte enables only exist for 2 bytes in loaded word, 'pack' into first 16 bits of 32 bit space before being assigned to temp reg.
     logic [7:0] memory_read_packed [3:0];
     logic [3:0] packed_set;
 
