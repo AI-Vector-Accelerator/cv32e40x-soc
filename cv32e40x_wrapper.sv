@@ -43,7 +43,9 @@ module cv32e40x_wrapper #(
         .X_MISA      ( '0 )
     ) ext_if();
 
-    cv32e40x_core core (
+    cv32e40x_core core #(
+	.X_EXT		     (1'b1	    )
+)(
         .clk_i               ( clk_i        ),
         .rst_ni              ( rst_ni       ),
         .scan_cg_en_i        ( 1'b0         ),

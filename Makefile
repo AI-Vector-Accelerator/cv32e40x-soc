@@ -35,6 +35,9 @@ MEM_LATENCY ?= 1
 # programs for testing
 PROGS ?= test.S
 
+# relative path for trace output
+TRACE_VCD := ./trace.vcd
+
 .PHONY: vivado verilator clean
 
 vivado: progs.csv
