@@ -35,7 +35,7 @@ MEM_LATENCY ?= 1
 # programs for testing
 PROGS ?= test.S
 
-TRACE_VCD = 1
+TRACE_VCD = trace.vcd
 
 .PHONY: vivado verilator clean
 

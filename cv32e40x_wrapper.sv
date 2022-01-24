@@ -405,8 +405,8 @@ module xava  #(
     
     
     // MEMORY RESULT INTERFACE
-    assign data_rdata_i = xif_mem_result.mem_result_valid &&(xif_mem_result.mem_result.id == xif_mem.mem_req.id) ? xif_mem_result.mem_result.rdata : 32'd0;
-    assign data_rvalid_i = xif_mem_result.mem_result_valid; //Signals VLSU that memory transaction (Read or write) has completed, so state machine can progress.
+    //assign data_rdata_i = xif_mem_result.mem_result_valid &&(xif_mem_result.mem_result.id == xif_mem.mem_req.id) ? xif_mem_result.mem_result.rdata : 32'd0;
+    //assign data_rvalid_i = xif_mem_result.mem_result_valid; //Signals VLSU that memory transaction (Read or write) has completed, so state machine can progress.
     // assign ?? = xif_mem_result.mem_result.err //Nothing to connect error code to, we just get incorrect operation
     // assign ?? = xif_mem_result.mem_result.id //According to spec, "Memory result transactions are provided by the CPU in the same order (with matching id) as the memory (request/response) transactions are received.", so ID can only be used to confirm this is true.
     
